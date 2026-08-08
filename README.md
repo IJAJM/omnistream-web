@@ -2,6 +2,15 @@
 
 Platform streaming gabungan: **Cinema** (gaya Netflix) + **Music** (gaya Spotify) + **Watch Party** real-time, dibangun dengan Next.js 14 (App Router) + TypeScript + Tailwind CSS.
 
+## Preview
+
+Screenshot tampilan halaman beranda (mobile), diambil dari build development.
+
+| Beranda | Trending Cinema | Trending Music |
+| --- | --- | --- |
+| ![Beranda OmniStream — hero section dengan tagline, tombol Jelajahi Cinema/Music, dan awal daftar trending](docs/screenshots/01-beranda.jpg) | ![Section Trending di Cinema — grid poster film/series dengan aksen warna marquee (oranye)](docs/screenshots/02-trending-cinema.jpg) | ![Section Trending di Music — grid cover lagu/artis dengan aksen warna frequency (ungu)](docs/screenshots/03-trending-music.jpg) |
+| Hero dengan headline dua-aksen ("Bareng" oranye / "real-time." ungu), deskripsi produk, dan CTA ke Cinema & Music. Player musik sticky sudah kelihatan di bawah. | Grid katalog 2 kolom (mobile) dengan poster rasio 2:3, judul, dan tipe+tahun. Divider oranye putus-putus jadi pembatas section khas area Cinema. | Grid katalog musik dengan cover art, judul lagu, dan nama artis/label. Divider ungu jadi penanda visual area Music, beda dari Cinema. |
+
 ## Menjalankan Proyek
 
 ```bash
