@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ink text-paper font-body antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display;
+  }
+  ::selection {
+    @apply bg-marquee/30 text-paper;
+  }
+  :focus-visible {
+    outline: 2px solid theme("colors.frequency.DEFAULT");
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Signature divider: reads as filmstrip sprockets on cinema surfaces,
+     waveform ticks on music surfaces. Same primitive, two moods. */
+  .divider-strip {
+    height: 6px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      currentColor 0px,
+      currentColor 3px,
+      transparent 3px,
+      transparent 12px
+    );
+    color: theme("colors.ink.raised");
+    opacity: 0.9;
+  }
+  .divider-strip--marquee { color: theme("colors.marquee.DEFAULT" / 45%); }
+  .divider-strip--frequency { color: theme("colors.frequency.DEFAULT" / 45%); }
+
+  .card-surface {
+    @apply bg-ink-raised/60 border border-white/5 rounded-lg backdrop-blur-sm;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
