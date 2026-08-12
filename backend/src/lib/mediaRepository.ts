@@ -63,4 +63,15 @@ export const mediaRepository = {
       .all(...types, limit) as MediaItem[];
     return rows.map(toResponse);
   },
+
+  /** Dipanggil setelah file berhasil di-upload ke storage. Simpan nama file relatifnya. */
+  setStreamFile(id: string, relativeFilename: string, durationSeconds?: number) {
+    db.prepare(`UPDATE media SET stream_url = ?, duration_seconds = COALESCE(?, duration_seconds) WHERE id = ?`)
+      .run(relativeFilename, durationSeconds ?? null, id);
+  },
+
+  /** Ambil raw row (butuh stream_url asli, bukan yang sudah diformat) buat keperluan streaming. */
+  findRawById(id: string): MediaItem | undefined {
+    return db.prepare("SELECT * FROM media WHERE id = ?").get(id) as MediaItem | undefined;
+  },
 };

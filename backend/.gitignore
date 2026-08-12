@@ -5,3 +5,4 @@ dev.db
 dev.db-shm
 dev.db-wal
 *.log
+uploads/

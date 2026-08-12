@@ -4,6 +4,7 @@ import cors from "cors";
 import { runMigrations } from "./lib/db";
 import authRoutes from "./routes/authRoutes";
 import catalogRoutes from "./routes/catalogRoutes";
+import streamRoutes from "./routes/streamRoutes";
 
 const app = express();
 const PORT = process.env.PORT ?? 8000;
@@ -18,6 +19,7 @@ app.use(express.json());
 // sesuai NEXT_PUBLIC_API_BASE_URL default di frontend (src/lib/api.ts)
 app.use("/api", authRoutes);
 app.use("/api", catalogRoutes);
+app.use("/api", streamRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

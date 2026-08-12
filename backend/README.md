@@ -58,7 +58,24 @@ Data katalog masih data contoh (seed) — sama persis dengan yang tadinya hardco
 
 Semua endpoint di atas sudah cocok dengan kontrak yang dipakai frontend di `src/lib/api.ts`.
 
-### Isi Ulang Data Contoh
+#### Tahap 3 — Video & Audio Streaming
+
+| Method | Endpoint | Keterangan |
+| --- | --- | --- |
+| POST | `/api/media/:id/upload` | Upload file video/audio untuk item media tertentu. Butuh login. Body: `multipart/form-data` dengan field `file` |
+| GET | `/api/media/:id/stream-url` | Minta signed URL sementara (berlaku 10 menit) untuk streaming. Butuh login |
+| GET | `/api/stream/:id?token=...` | Endpoint streaming aktual, publik tapi diproteksi lewat token dari `stream-url`. Mendukung HTTP Range untuk seek/scrub |
+
+**Cara kerja alurnya:**
+1. Frontend minta `GET /api/media/:id/stream-url` (dengan token login user)
+2. Backend balikin URL sementara berisi token khusus streaming, valid 10 menit
+3. Player (`<video>`/`<audio>`) langsung diarahkan ke URL itu — browser otomatis kirim header `Range` saat user nge-seek, dan server balikin `206 Partial Content` per potongan file
+
+File fisik disimpan di folder `uploads/` (local disk, di-gitignore). Layer storage-nya (`src/lib/storage.ts`) didesain sebagai abstraksi — pemanggilnya nggak perlu berubah kalau nanti diganti ke S3/Cloudflare R2 untuk production.
+
+**Belum termasuk di tahap ini** (masuk pekerjaan lanjutan/production-hardening): transcoding otomatis ke HLS (`.m3u8`), multi-bitrate/adaptive streaming, dan CDN. Untuk skala kecil-menengah, serving langsung dengan Range support seperti sekarang ini sudah cukup.
+
+## Isi Ulang Data Contoh
 ```bash
 npm run seed
 ```
@@ -85,7 +102,8 @@ Catatan: `src/lib/seed.ts` berisi data contoh katalog — jalankan `npm run seed
 
 - [x] **Tahap 1 — Fondasi & Auth**: struktur project, koneksi database, register/login/me dengan JWT ✅ *(selesai)*
 - [x] **Tahap 2 — Katalog Cinema & Music**: endpoint `/home`, `/cinema`, `/cinema/:id`, `/music`, `/music/:id` + data seed ✅ *(selesai)*
-- [ ] **Tahap 3 — Video & Audio Streaming**: setup storage, transcoding HLS, signed URL
+- [x] **Tahap 3 — Video & Audio Streaming**: upload, signed URL, streaming dengan HTTP Range ✅ *(selesai — transcoding HLS & CDN masuk tahap production-hardening nanti)*
+- [ ] **Tahap 4 — Watch Party Real-time**: WebSocket server, room management, sinkronisasi play/pause/seek
 - [ ] **Tahap 4 — Watch Party Real-time**: WebSocket server, room management, sinkronisasi play/pause/seek
 - [ ] **Tahap 5 — Hardening**: rate limiting, logging, deployment, migrasi ke PostgreSQL
 
