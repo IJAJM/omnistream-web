@@ -26,7 +26,9 @@ Server jalan di `http://localhost:8000`. Test cepat:
 curl http://localhost:8000/health
 ```
 
-## Endpoint yang Sudah Jalan (Tahap 1: Auth)
+## Endpoint yang Sudah Jalan
+
+### Tahap 1 — Auth
 
 | Method | Endpoint | Keterangan |
 | --- | --- | --- |
@@ -35,14 +37,32 @@ curl http://localhost:8000/health
 | GET | `/api/auth/me` | Ambil data user yang sedang login. Butuh header `Authorization: Bearer <token>` |
 | GET | `/health` | Health check server |
 
-Semua endpoint ini sudah cocok dengan kontrak yang dipakai frontend di `src/lib/api.ts` (`api.login()` dan `api.register()`).
-
-### Validasi
+### Validasi Auth
 - `name`: minimal 2 karakter
 - `email`: harus format email valid
 - `password`: minimal 8 karakter
 - Email yang sudah terdaftar akan ditolak dengan status `409`
 - Login salah (email/password tidak cocok) akan ditolak dengan status `401`
+
+### Tahap 2 — Katalog Cinema & Music
+
+| Method | Endpoint | Keterangan |
+| --- | --- | --- |
+| GET | `/api/home` | Feed gabungan trending. Return: `{ cinema: MediaItem[], music: MediaItem[] }` |
+| GET | `/api/cinema` | Daftar semua film & series |
+| GET | `/api/cinema/:id` | Detail 1 film/series. `404` kalau id tidak ada atau bukan tipe cinema |
+| GET | `/api/music` | Daftar semua lagu & album |
+| GET | `/api/music/:id` | Detail 1 lagu/album. `404` kalau id tidak ada atau bukan tipe music |
+
+Data katalog masih data contoh (seed) — sama persis dengan yang tadinya hardcoded di frontend (`src/app/cinema/page.tsx`, `src/app/music/page.tsx`), supaya begitu frontend disambungkan ke API ini, tampilannya nggak berubah.
+
+Semua endpoint di atas sudah cocok dengan kontrak yang dipakai frontend di `src/lib/api.ts`.
+
+### Isi Ulang Data Contoh
+```bash
+npm run seed
+```
+Ini akan insert/replace 5 item cinema + 5 item music ke database. Aman dijalankan berkali-kali (pakai `INSERT OR REPLACE`).
 
 ## Struktur Folder
 
@@ -59,10 +79,12 @@ backend/
 └── dev.db                     # Database SQLite (otomatis dibuat, di-gitignore)
 ```
 
+Catatan: `src/lib/seed.ts` berisi data contoh katalog — jalankan `npm run seed` setelah `npm install` biar `/api/home`, `/api/cinema`, `/api/music` ada isinya.
+
 ## Roadmap
 
 - [x] **Tahap 1 — Fondasi & Auth**: struktur project, koneksi database, register/login/me dengan JWT ✅ *(selesai)*
-- [ ] **Tahap 2 — Katalog Cinema & Music**: endpoint `/home`, `/cinema`, `/cinema/:id`, `/music`, `/music/:id` + data seed
+- [x] **Tahap 2 — Katalog Cinema & Music**: endpoint `/home`, `/cinema`, `/cinema/:id`, `/music`, `/music/:id` + data seed ✅ *(selesai)*
 - [ ] **Tahap 3 — Video & Audio Streaming**: setup storage, transcoding HLS, signed URL
 - [ ] **Tahap 4 — Watch Party Real-time**: WebSocket server, room management, sinkronisasi play/pause/seek
 - [ ] **Tahap 5 — Hardening**: rate limiting, logging, deployment, migrasi ke PostgreSQL

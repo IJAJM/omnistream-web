@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { runMigrations } from "./lib/db";
 import authRoutes from "./routes/authRoutes";
+import catalogRoutes from "./routes/catalogRoutes";
 
 const app = express();
 const PORT = process.env.PORT ?? 8000;
@@ -16,6 +17,7 @@ app.use(express.json());
 // Semua route API OmniStream ada di bawah prefix /api,
 // sesuai NEXT_PUBLIC_API_BASE_URL default di frontend (src/lib/api.ts)
 app.use("/api", authRoutes);
+app.use("/api", catalogRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

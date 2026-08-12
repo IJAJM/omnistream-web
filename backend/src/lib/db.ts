@@ -27,5 +27,19 @@ export function runMigrations() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Tahap 2: katalog Cinema (movie/series) & Music (track/album)
+    CREATE TABLE IF NOT EXISTS media (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL CHECK (type IN ('movie', 'series', 'track', 'album')),
+      title TEXT NOT NULL,
+      subtitle TEXT,
+      poster_url TEXT NOT NULL,
+      duration_seconds INTEGER,
+      stream_url TEXT,
+      genre TEXT, -- JSON array string, mis. '["Drama","Misteri"]'
+      release_year INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 }
