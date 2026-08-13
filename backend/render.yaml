@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: omnistream-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: STREAM_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false # isi manual di dashboard Render dengan domain frontend Vercel kamu
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: STORAGE_ROOT
+        value: ./uploads
