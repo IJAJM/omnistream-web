@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import { uploadMedia, getStreamUrl, streamMedia } from "../controllers/streamController";
 import { requireAuth } from "../middleware/requireAuth";
+import { asyncHandler } from "../middleware/asyncHandler";
 import { storage } from "../lib/storage";
 
 const upload = multer({
@@ -14,19 +15,13 @@ const upload = multer({
       cb(null, `${randomUUID()}${ext}`);
     },
   }),
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB batas per file
+  limits: { fileSize: 500 * 1024 * 1024 },
 });
 
 const router = Router();
 
-// Upload butuh login (nanti diperketat jadi admin-only saat role sistem sudah ada)
-router.post("/media/:id/upload", requireAuth, upload.single("file"), uploadMedia);
-
-// Minta signed URL sebelum streaming — juga butuh login
-router.get("/media/:id/stream-url", requireAuth, getStreamUrl);
-
-// Endpoint streaming aktualnya publik (diproteksi lewat token di query, bukan header auth,
-// karena elemen <video>/<audio> di browser nggak bisa kirim custom header)
-router.get("/stream/:id", streamMedia);
+router.post("/media/:id/upload", requireAuth, upload.single("file"), asyncHandler(uploadMedia));
+router.get("/media/:id/stream-url", requireAuth, asyncHandler(getStreamUrl));
+router.get("/stream/:id", asyncHandler(streamMedia));
 
 export default router;

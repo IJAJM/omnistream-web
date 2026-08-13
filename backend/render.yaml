@@ -20,6 +20,6 @@ services:
       - key: CORS_ORIGIN
         sync: false # isi manual di dashboard Render dengan domain frontend Vercel kamu
       - key: DATABASE_URL
-        value: file:./dev.db
+        sync: false # isi manual dengan connection string Supabase (Settings > Database > Connection string)
       - key: STORAGE_ROOT
         value: ./uploads

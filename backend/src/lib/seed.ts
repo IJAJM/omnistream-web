@@ -1,7 +1,5 @@
 import "dotenv/config";
-import { db, runMigrations } from "./db";
-
-runMigrations();
+import { pool, runMigrations } from "./db";
 
 const cinemaItems = [
   { id: "c1", type: "series", title: "Senja di Kota Tua", subtitle: "Series • 2025", posterUrl: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400", releaseYear: 2025, genre: ["Drama", "Misteri"] },
@@ -19,26 +17,28 @@ const musicItems = [
   { id: "m5", type: "album", title: "Serupa Ombak", subtitle: "Kolase Senja", posterUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400", genre: ["Indie"] },
 ] as const;
 
-const insert = db.prepare(`
-  INSERT OR REPLACE INTO media (id, type, title, subtitle, poster_url, duration_seconds, stream_url, genre, release_year)
-  VALUES (@id, @type, @title, @subtitle, @posterUrl, @durationSeconds, @streamUrl, @genre, @releaseYear)
-`);
+async function seed() {
+  await runMigrations();
 
-const seedAll = db.transaction(() => {
   for (const item of [...cinemaItems, ...musicItems]) {
-    insert.run({
-      id: item.id,
-      type: item.type,
-      title: item.title,
-      subtitle: item.subtitle,
-      posterUrl: item.posterUrl,
-      durationSeconds: "durationSeconds" in item ? (item as { durationSeconds?: number }).durationSeconds ?? null : null,
-      streamUrl: null, // diisi di Tahap 3 pas sistem streaming sudah ada
-      genre: JSON.stringify(item.genre ?? []),
-      releaseYear: "releaseYear" in item ? (item as { releaseYear?: number }).releaseYear ?? null : null,
-    });
-  }
-});
+    const durationSeconds = "durationSeconds" in item ? (item as { durationSeconds?: number }).durationSeconds ?? null : null;
+    const releaseYear = "releaseYear" in item ? (item as { releaseYear?: number }).releaseYear ?? null : null;
 
-seedAll();
-console.log(`Seed selesai: ${cinemaItems.length} item cinema, ${musicItems.length} item music.`);
+    await pool.query(
+      `INSERT INTO media (id, type, title, subtitle, poster_url, duration_seconds, stream_url, genre, release_year)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (id) DO UPDATE SET
+         type = EXCLUDED.type, title = EXCLUDED.title, subtitle = EXCLUDED.subtitle,
+         poster_url = EXCLUDED.poster_url, genre = EXCLUDED.genre, release_year = EXCLUDED.release_year`,
+      [item.id, item.type, item.title, item.subtitle, item.posterUrl, durationSeconds, null, JSON.stringify(item.genre ?? []), releaseYear]
+    );
+  }
+
+  console.log(`Seed selesai: ${cinemaItems.length} item cinema, ${musicItems.length} item music.`);
+  await pool.end();
+}
+
+seed().catch((err) => {
+  console.error("Seed gagal:", err);
+  process.exit(1);
+});

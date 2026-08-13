@@ -6,14 +6,14 @@ import {
   getMusicCatalog,
   getMusicDetail,
 } from "../controllers/catalogController";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = Router();
 
-// Sesuai kontrak di frontend: src/lib/api.ts
-router.get("/home", getHomeFeed);
-router.get("/cinema", getCinemaCatalog);
-router.get("/cinema/:id", getCinemaDetail);
-router.get("/music", getMusicCatalog);
-router.get("/music/:id", getMusicDetail);
+router.get("/home", asyncHandler(getHomeFeed));
+router.get("/cinema", asyncHandler(getCinemaCatalog));
+router.get("/cinema/:id", asyncHandler(getCinemaDetail));
+router.get("/music", asyncHandler(getMusicCatalog));
+router.get("/music/:id", asyncHandler(getMusicDetail));
 
 export default router;

@@ -3,13 +3,8 @@ import { mediaRepository } from "../lib/mediaRepository";
 import { storage } from "../lib/storage";
 import { generateStreamToken, verifyStreamToken } from "../lib/streamToken";
 
-/**
- * POST /api/media/:id/upload
- * Upload file video/audio untuk sebuah item media. Multer sudah menyimpan file
- * fisiknya ke folder storage sebelum handler ini jalan (lihat streamRoutes.ts).
- */
-export function uploadMedia(req: Request, res: Response) {
-  const media = mediaRepository.findRawById(req.params.id);
+export async function uploadMedia(req: Request, res: Response) {
+  const media = await mediaRepository.findRawById(String(req.params.id));
   if (!media) {
     return res.status(404).json({ error: "Media tidak ditemukan" });
   }
@@ -19,17 +14,12 @@ export function uploadMedia(req: Request, res: Response) {
     return res.status(400).json({ error: "File tidak ditemukan di request" });
   }
 
-  mediaRepository.setStreamFile(media.id, file.filename);
+  await mediaRepository.setStreamFile(media.id, file.filename);
   return res.status(200).json({ message: "Upload berhasil", filename: file.filename });
 }
 
-/**
- * GET /api/media/:id/stream-url
- * Menghasilkan signed URL sementara (berlaku ~10 menit) buat streaming media ini.
- * Frontend minta URL ini dulu sebelum mulai play, bukan langsung hardcode ke /api/stream/:id.
- */
-export function getStreamUrl(req: Request, res: Response) {
-  const media = mediaRepository.findRawById(req.params.id);
+export async function getStreamUrl(req: Request, res: Response) {
+  const media = await mediaRepository.findRawById(String(req.params.id));
   if (!media || !media.stream_url) {
     return res.status(404).json({ error: "File streaming belum tersedia untuk media ini" });
   }
@@ -41,13 +31,8 @@ export function getStreamUrl(req: Request, res: Response) {
   });
 }
 
-/**
- * GET /api/stream/:id?token=...
- * Serve file media dengan dukungan HTTP Range, supaya player bisa seek/scrub
- * tanpa harus download seluruh file dulu. Ini standar wajib untuk streaming.
- */
-export function streamMedia(req: Request, res: Response) {
-  const media = mediaRepository.findRawById(req.params.id);
+export async function streamMedia(req: Request, res: Response) {
+  const media = await mediaRepository.findRawById(String(req.params.id));
   if (!media || !media.stream_url) {
     return res.status(404).json({ error: "File streaming tidak ditemukan" });
   }
@@ -67,7 +52,6 @@ export function streamMedia(req: Request, res: Response) {
   const contentType = filename.endsWith(".mp4") ? "video/mp4" : "audio/mpeg";
 
   if (!range) {
-    // Tanpa Range header: kirim seluruh file (fallback, jarang dipakai player modern)
     res.writeHead(200, {
       "Content-Length": fileSize,
       "Content-Type": contentType,
@@ -77,7 +61,6 @@ export function streamMedia(req: Request, res: Response) {
     return;
   }
 
-  // Parse header "Range: bytes=START-END"
   const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
   const start = parseInt(startStr, 10);
   const end = endStr ? parseInt(endStr, 10) : fileSize - 1;

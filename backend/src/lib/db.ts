@@ -1,31 +1,27 @@
-import Database from "better-sqlite3";
-import path from "path";
+import { Pool } from "pg";
 
 /**
- * Koneksi database SQLite untuk development.
- * Untuk production, ganti layer ini ke PostgreSQL (mis. pakai `pg` atau Prisma
- * dengan provider postgresql) — struktur query di repository layer (src/lib/*Repository.ts)
- * dibuat sesederhana mungkin supaya gampang di-porting.
+ * Koneksi PostgreSQL (Supabase). Semua query di seluruh backend jalan lewat
+ * pool ini. SSL diaktifkan karena Supabase mewajibkan koneksi terenkripsi.
  */
-const DB_PATH = process.env.DATABASE_PATH ?? path.join(__dirname, "../../dev.db");
-
-export const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
 /**
  * Jalankan sekali saat startup: bikin tabel kalau belum ada.
- * Tahap 1: hanya tabel `users`.
- * Tahap berikutnya (katalog, watch party) akan menambah migrasi baru di sini.
+ * Aman dijalankan berkali-kali (pakai IF NOT EXISTS).
  */
-export function runMigrations() {
-  db.exec(`
+export async function runMigrations() {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     -- Tahap 2: katalog Cinema (movie/series) & Music (track/album)
@@ -39,18 +35,18 @@ export function runMigrations() {
       stream_url TEXT,
       genre TEXT, -- JSON array string, mis. '["Drama","Misteri"]'
       release_year INTEGER,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     -- Tahap 4: Watch Party rooms. Status "live" & jumlah member dihitung real-time
     -- dari koneksi WebSocket aktif (lihat watchPartyRegistry.ts), bukan dari tabel ini.
     CREATE TABLE IF NOT EXISTS watch_party_rooms (
-      id TEXT PRIMARY KEY,
-      host_id TEXT NOT NULL,
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      host_id UUID NOT NULL,
       host_name TEXT NOT NULL,
       media_id TEXT NOT NULL,
       media_title TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY (media_id) REFERENCES media(id)
     );
   `);

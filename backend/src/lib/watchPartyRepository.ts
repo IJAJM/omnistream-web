@@ -1,5 +1,4 @@
-import { randomUUID } from "crypto";
-import { db } from "./db";
+import { pool } from "./db";
 
 export interface WatchPartyRoomRow {
   id: string;
@@ -11,19 +10,32 @@ export interface WatchPartyRoomRow {
 }
 
 export const watchPartyRepository = {
-  create(input: { hostId: string; hostName: string; mediaId: string; mediaTitle: string }): WatchPartyRoomRow {
-    const id = randomUUID();
-    db.prepare(
-      `INSERT INTO watch_party_rooms (id, host_id, host_name, media_id, media_title) VALUES (?, ?, ?, ?, ?)`
-    ).run(id, input.hostId, input.hostName, input.mediaId, input.mediaTitle);
-    return this.findById(id)!;
+  async create(input: {
+    hostId: string;
+    hostName: string;
+    mediaId: string;
+    mediaTitle: string;
+  }): Promise<WatchPartyRoomRow> {
+    const { rows } = await pool.query<WatchPartyRoomRow>(
+      `INSERT INTO watch_party_rooms (host_id, host_name, media_id, media_title)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [input.hostId, input.hostName, input.mediaId, input.mediaTitle]
+    );
+    return rows[0];
   },
 
-  findById(id: string): WatchPartyRoomRow | undefined {
-    return db.prepare("SELECT * FROM watch_party_rooms WHERE id = ?").get(id) as WatchPartyRoomRow | undefined;
+  async findById(id: string): Promise<WatchPartyRoomRow | undefined> {
+    const { rows } = await pool.query<WatchPartyRoomRow>(
+      "SELECT * FROM watch_party_rooms WHERE id = $1",
+      [id]
+    );
+    return rows[0];
   },
 
-  findAll(): WatchPartyRoomRow[] {
-    return db.prepare("SELECT * FROM watch_party_rooms ORDER BY created_at DESC").all() as WatchPartyRoomRow[];
+  async findAll(): Promise<WatchPartyRoomRow[]> {
+    const { rows } = await pool.query<WatchPartyRoomRow>(
+      "SELECT * FROM watch_party_rooms ORDER BY created_at DESC"
+    );
+    return rows;
   },
 };

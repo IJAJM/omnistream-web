@@ -1,14 +1,12 @@
 import { Router } from "express";
 import { register, login, me } from "../controllers/authController";
 import { requireAuth } from "../middleware/requireAuth";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = Router();
 
-// Sesuai kontrak di frontend: src/lib/api.ts -> api.login() & api.register()
-router.post("/auth/register", register);
-router.post("/auth/login", login);
-
-// Endpoint tambahan buat cek user yang sedang login (dipakai frontend nanti)
-router.get("/auth/me", requireAuth, me);
+router.post("/auth/register", asyncHandler(register));
+router.post("/auth/login", asyncHandler(login));
+router.get("/auth/me", requireAuth, asyncHandler(me));
 
 export default router;

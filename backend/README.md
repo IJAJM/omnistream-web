@@ -4,12 +4,12 @@ Backend API untuk OmniStream. Dibangun bertahap — status progress ada di bagia
 
 ## Tech Stack
 - Node.js + Express + TypeScript
-- SQLite via `better-sqlite3` (development) — gampang di-swap ke PostgreSQL untuk production
+- **PostgreSQL** (hosted di Supabase, free tier) via `pg` — persisten, aman dari data hilang tiap Render redeploy
 - JWT (`jsonwebtoken`) untuk autentikasi
 - `bcryptjs` untuk hash password
 - `zod` untuk validasi input
 
-> Catatan: awalnya dicoba pakai Prisma, tapi di-skip untuk sekarang karena proses `prisma generate` butuh download binary dari server Prisma yang kadang diblokir jaringan tertentu. `better-sqlite3` dipilih karena lebih ringan dan tidak butuh binary eksternal — cocok untuk tahap awal ini. Bisa dievaluasi lagi nanti kalau proyek makin besar.
+> Catatan: sempat dicoba pakai Prisma, tapi di-skip karena proses `prisma generate` butuh download binary dari server Prisma yang kadang diblokir jaringan tertentu. Tahap awal pakai `better-sqlite3` (ringan, tanpa binary eksternal) untuk development cepat, lalu dimigrasi ke PostgreSQL (`pg`, connection pooling manual) sebelum deploy — soalnya filesystem Render itu sementara dan data SQLite bakal hilang tiap redeploy.
 
 ## Menjalankan Secara Lokal
 
@@ -17,6 +17,12 @@ Backend API untuk OmniStream. Dibangun bertahap — status progress ada di bagia
 cd backend
 npm install
 cp .env.example .env
+```
+
+Lalu isi `DATABASE_URL` di `.env` dengan connection string database PostgreSQL kamu (Supabase: **Project Settings → Database → Connection string → URI**). Setelah itu:
+
+```bash
+npm run seed   # isi data katalog contoh
 npm run dev
 ```
 
@@ -107,7 +113,7 @@ Yang ditambahkan di tahap ini (nggak nambah fitur baru, tapi bikin yang udah ada
 
 #### Deploy ke Render (gratis, buat testing)
 
-Kenapa bukan Vercel: Vercel serverless nggak cocok buat backend ini karena dua alasan — filesystem-nya sementara (SQLite bakal ke-reset), dan nggak mendukung WebSocket yang perlu nyala terus buat Watch Party. Render jalan sebagai server biasa (long-running process), jadi cocok.
+Kenapa bukan Vercel: Vercel serverless nggak cocok buat backend ini karena dua alasan — filesystem-nya sementara (nggak cocok buat nyimpen file upload), dan nggak mendukung WebSocket yang perlu nyala terus buat Watch Party. Render jalan sebagai server biasa (long-running process), jadi cocok. Database-nya sendiri (PostgreSQL via Supabase) sudah persisten dan terpisah dari server, jadi aman dari redeploy.
 
 **Langkah-langkah:**
 1. Buka [render.com](https://render.com), sign up/login (bisa pakai akun GitHub)
@@ -122,7 +128,7 @@ Kenapa bukan Vercel: Vercel serverless nggak cocok buat backend ini karena dua a
 
 **Catatan penting soal Render free tier:**
 - Server otomatis "tidur" kalau nggak diakses ~15 menit — request pertama setelahnya bakal lambat (~10-30 detik) sampai server nyala lagi. Ini normal buat free tier, bukan bug
-- **Filesystem-nya juga sementara** — kalau Render redeploy service kamu (misal abis push commit baru), file `dev.db` (database SQLite) dan folder `uploads/` bakal ke-reset ke kosong. Ini oke-oke aja buat testing/demo, tapi **untuk production beneran, migrasi ke PostgreSQL** (database terpisah yang persisten) itu wajib — lihat bagian "Untuk Production" di bawah
+- **Filesystem Render itu sementara** — kalau Render redeploy service kamu (misal abis push commit baru), folder `uploads/` (file video/audio yang di-upload) bakal ke-reset ke kosong. Database (PostgreSQL di Supabase) **aman**, karena hosting-nya terpisah dari Render. Untuk file upload yang persisten di production beneran, migrasi storage ke S3/Cloudflare R2 (lihat `src/lib/storage.ts`)
 
 ## Isi Ulang Data Contoh
 ```bash
@@ -142,7 +148,7 @@ backend/
 │   ├── lib/                    # Koneksi DB, JWT helper, repository layer
 │   └── types/                  # Skema validasi (Zod)
 ├── .env.example
-└── dev.db                     # Database SQLite (otomatis dibuat, di-gitignore)
+└── uploads/                   # File video/audio hasil upload (di-gitignore)
 ```
 
 Catatan: `src/lib/seed.ts` berisi data contoh katalog — jalankan `npm run seed` setelah `npm install` biar `/api/home`, `/api/cinema`, `/api/music` ada isinya.
@@ -154,11 +160,15 @@ Catatan: `src/lib/seed.ts` berisi data contoh katalog — jalankan `npm run seed
 - [x] **Tahap 3 — Video & Audio Streaming**: upload, signed URL, streaming dengan HTTP Range ✅ *(selesai — transcoding HLS & CDN masuk tahap production-hardening nanti)*
 - [x] **Tahap 4 — Watch Party Real-time**: WebSocket server, room management, sinkronisasi play/pause/seek ✅ *(selesai, ditest dengan 2 client simulasi)*
 - [x] **Tahap 5 — Hardening & Deploy**: rate limiting, security headers, error handling, config deploy Render ✅ *(selesai)*
-- [ ] **Tahap 4 — Watch Party Real-time**: WebSocket server, room management, sinkronisasi play/pause/seek
-- [ ] **Tahap 5 — Hardening**: rate limiting, logging, deployment, migrasi ke PostgreSQL
+- [x] **Migrasi Database**: SQLite → PostgreSQL (Supabase) ✅ *(selesai, persisten dan aman dari redeploy)*
+- [x] **Live Deploy**: backend di Render + frontend di Vercel ✅ *(selesai)*
 
-## Untuk Production
-Sebelum deploy ke production:
-1. Ganti `JWT_SECRET` di `.env` dengan string random yang kuat (jangan pakai default)
-2. Pertimbangkan migrasi dari SQLite ke PostgreSQL untuk concurrent write yang lebih baik
-3. Set `CORS_ORIGIN` ke domain frontend production, bukan `localhost`
+## Checklist Production (status sekarang)
+1. ✅ `JWT_SECRET` & `STREAM_SECRET` sudah pakai string random yang kuat (bukan default) — di-generate otomatis lewat `render.yaml`
+2. ✅ Sudah migrasi dari SQLite ke PostgreSQL (Supabase) untuk data yang persisten & concurrent write yang lebih baik
+3. ✅ `CORS_ORIGIN` sudah diarahkan ke domain frontend production (Vercel), bukan `localhost`
+
+Yang masih perlu dipikirkan kalau proyek ini beneran dipakai serius (bukan cuma testing):
+- Storage file upload masih di local disk Render (sementara, ke-reset tiap redeploy) — migrasi ke S3/Cloudflare R2 untuk production beneran
+- Transcoding HLS otomatis + CDN buat streaming yang lebih optimal
+- Kalau backend di-scale ke lebih dari 1 instance, state Watch Party (in-memory) perlu dipindah ke Redis pub/sub

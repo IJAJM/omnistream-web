@@ -1,5 +1,4 @@
-import { randomUUID } from "crypto";
-import { db } from "./db";
+import { pool } from "./db";
 
 export interface User {
   id: string;
@@ -11,19 +10,21 @@ export interface User {
 }
 
 export const userRepository = {
-  findByEmail(email: string): User | undefined {
-    return db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User | undefined;
+  async findByEmail(email: string): Promise<User | undefined> {
+    const { rows } = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
+    return rows[0];
   },
 
-  findById(id: string): User | undefined {
-    return db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
+  async findById(id: string): Promise<User | undefined> {
+    const { rows } = await pool.query<User>("SELECT * FROM users WHERE id = $1", [id]);
+    return rows[0];
   },
 
-  create(input: { name: string; email: string; passwordHash: string }): User {
-    const id = randomUUID();
-    db.prepare(
-      `INSERT INTO users (id, name, email, password_hash) VALUES (?, ?, ?, ?)`
-    ).run(id, input.name, input.email, input.passwordHash);
-    return this.findById(id)!;
+  async create(input: { name: string; email: string; passwordHash: string }): Promise<User> {
+    const { rows } = await pool.query<User>(
+      `INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING *`,
+      [input.name, input.email, input.passwordHash]
+    );
+    return rows[0];
   },
 };

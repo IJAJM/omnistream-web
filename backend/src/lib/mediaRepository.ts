@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { pool } from "./db";
 
 export type MediaType = "movie" | "series" | "track" | "album";
 
@@ -42,36 +42,38 @@ function toResponse(row: MediaItem): MediaItemResponse {
 }
 
 export const mediaRepository = {
-  findByTypes(types: MediaType[]): MediaItemResponse[] {
-    const placeholders = types.map(() => "?").join(",");
-    const rows = db
-      .prepare(`SELECT * FROM media WHERE type IN (${placeholders}) ORDER BY created_at DESC`)
-      .all(...types) as MediaItem[];
+  async findByTypes(types: MediaType[]): Promise<MediaItemResponse[]> {
+    const { rows } = await pool.query<MediaItem>(
+      `SELECT * FROM media WHERE type = ANY($1) ORDER BY created_at DESC`,
+      [types]
+    );
     return rows.map(toResponse);
   },
 
-  findById(id: string): MediaItemResponse | undefined {
-    const row = db.prepare("SELECT * FROM media WHERE id = ?").get(id) as MediaItem | undefined;
-    return row ? toResponse(row) : undefined;
+  async findById(id: string): Promise<MediaItemResponse | undefined> {
+    const { rows } = await pool.query<MediaItem>("SELECT * FROM media WHERE id = $1", [id]);
+    return rows[0] ? toResponse(rows[0]) : undefined;
   },
 
-  // Ambil beberapa item teratas per tipe, dipakai buat feed home (trending).
-  findTrending(types: MediaType[], limit: number): MediaItemResponse[] {
-    const placeholders = types.map(() => "?").join(",");
-    const rows = db
-      .prepare(`SELECT * FROM media WHERE type IN (${placeholders}) ORDER BY created_at DESC LIMIT ?`)
-      .all(...types, limit) as MediaItem[];
+  async findTrending(types: MediaType[], limit: number): Promise<MediaItemResponse[]> {
+    const { rows } = await pool.query<MediaItem>(
+      `SELECT * FROM media WHERE type = ANY($1) ORDER BY created_at DESC LIMIT $2`,
+      [types, limit]
+    );
     return rows.map(toResponse);
   },
 
   /** Dipanggil setelah file berhasil di-upload ke storage. Simpan nama file relatifnya. */
-  setStreamFile(id: string, relativeFilename: string, durationSeconds?: number) {
-    db.prepare(`UPDATE media SET stream_url = ?, duration_seconds = COALESCE(?, duration_seconds) WHERE id = ?`)
-      .run(relativeFilename, durationSeconds ?? null, id);
+  async setStreamFile(id: string, relativeFilename: string, durationSeconds?: number): Promise<void> {
+    await pool.query(
+      `UPDATE media SET stream_url = $1, duration_seconds = COALESCE($2, duration_seconds) WHERE id = $3`,
+      [relativeFilename, durationSeconds ?? null, id]
+    );
   },
 
   /** Ambil raw row (butuh stream_url asli, bukan yang sudah diformat) buat keperluan streaming. */
-  findRawById(id: string): MediaItem | undefined {
-    return db.prepare("SELECT * FROM media WHERE id = ?").get(id) as MediaItem | undefined;
+  async findRawById(id: string): Promise<MediaItem | undefined> {
+    const { rows } = await pool.query<MediaItem>("SELECT * FROM media WHERE id = $1", [id]);
+    return rows[0];
   },
 };
