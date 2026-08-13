@@ -41,5 +41,17 @@ export function runMigrations() {
       release_year INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Tahap 4: Watch Party rooms. Status "live" & jumlah member dihitung real-time
+    -- dari koneksi WebSocket aktif (lihat watchPartyRegistry.ts), bukan dari tabel ini.
+    CREATE TABLE IF NOT EXISTS watch_party_rooms (
+      id TEXT PRIMARY KEY,
+      host_id TEXT NOT NULL,
+      host_name TEXT NOT NULL,
+      media_id TEXT NOT NULL,
+      media_title TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (media_id) REFERENCES media(id)
+    );
   `);
 }

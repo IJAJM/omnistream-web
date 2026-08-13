@@ -75,6 +75,25 @@ File fisik disimpan di folder `uploads/` (local disk, di-gitignore). Layer stora
 
 **Belum termasuk di tahap ini** (masuk pekerjaan lanjutan/production-hardening): transcoding otomatis ke HLS (`.m3u8`), multi-bitrate/adaptive streaming, dan CDN. Untuk skala kecil-menengah, serving langsung dengan Range support seperti sekarang ini sudah cukup.
 
+### Tahap 4 — Watch Party Real-time
+
+| Method/Protokol | Endpoint | Keterangan |
+| --- | --- | --- |
+| POST | `/api/watchparty/rooms` | Bikin room baru. Butuh login. Body: `{ mediaId }` |
+| GET | `/api/watchparty/rooms` | Daftar semua room, termasuk `isLive` & `memberCount` real-time |
+| GET | `/api/watchparty/rooms/:id` | Detail 1 room |
+| WebSocket | `ws://.../ws/watchparty?room=<roomId>&client=<clientId>` | Koneksi real-time buat sinkronisasi play/pause/seek |
+
+**Cara kerja WebSocket-nya**, persis mengikuti kontrak yang sudah ada di frontend (`src/hooks/useVideoSync.ts`) — jadi frontend nggak perlu diubah sama sekali:
+- Client konek dengan query param `room` (id room) dan `client` (id unik per user/tab)
+- Client kirim pesan `{ currentTime, isPlaying, updatedBy }` tiap kali user play/pause/seek video lokal
+- Server broadcast pesan itu ke semua client LAIN di room yang sama (bukan ke pengirimnya sendiri)
+- Client yang baru join langsung dikirimin state terakhir room itu, biar dia auto-sinkron
+
+**`isLive` dan `memberCount`** dihitung real-time dari jumlah koneksi WebSocket yang aktif di tiap room (in-memory), bukan dari database — begitu semua orang keluar dari room, room otomatis "mati" (`isLive: false`) tanpa perlu proses tambahan.
+
+> Catatan skalabilitas: state koneksi ini disimpan in-memory per-instance server. Kalau nanti backend di-scale ke lebih dari 1 instance, ini perlu dipindah ke Redis pub/sub supaya semua instance server "lihat" room yang sama. Untuk sekarang (1 instance, buat testing) ini sudah cukup dan sudah ditest jalan dengan 2 client simulasi di `scripts/test-watchparty.js`.
+
 ## Isi Ulang Data Contoh
 ```bash
 npm run seed
@@ -103,7 +122,8 @@ Catatan: `src/lib/seed.ts` berisi data contoh katalog — jalankan `npm run seed
 - [x] **Tahap 1 — Fondasi & Auth**: struktur project, koneksi database, register/login/me dengan JWT ✅ *(selesai)*
 - [x] **Tahap 2 — Katalog Cinema & Music**: endpoint `/home`, `/cinema`, `/cinema/:id`, `/music`, `/music/:id` + data seed ✅ *(selesai)*
 - [x] **Tahap 3 — Video & Audio Streaming**: upload, signed URL, streaming dengan HTTP Range ✅ *(selesai — transcoding HLS & CDN masuk tahap production-hardening nanti)*
-- [ ] **Tahap 4 — Watch Party Real-time**: WebSocket server, room management, sinkronisasi play/pause/seek
+- [x] **Tahap 4 — Watch Party Real-time**: WebSocket server, room management, sinkronisasi play/pause/seek ✅ *(selesai, ditest dengan 2 client simulasi)*
+- [ ] **Tahap 5 — Hardening**: rate limiting, logging, deployment, migrasi ke PostgreSQL
 - [ ] **Tahap 4 — Watch Party Real-time**: WebSocket server, room management, sinkronisasi play/pause/seek
 - [ ] **Tahap 5 — Hardening**: rate limiting, logging, deployment, migrasi ke PostgreSQL
 
