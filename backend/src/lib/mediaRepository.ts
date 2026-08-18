@@ -76,4 +76,56 @@ export const mediaRepository = {
     const { rows } = await pool.query<MediaItem>("SELECT * FROM media WHERE id = $1", [id]);
     return rows[0];
   },
+
+  async create(input: {
+    id: string;
+    type: MediaType;
+    title: string;
+    subtitle?: string;
+    posterUrl: string;
+    genre?: string[];
+    releaseYear?: number;
+  }): Promise<MediaItemResponse> {
+    const { rows } = await pool.query<MediaItem>(
+      `INSERT INTO media (id, type, title, subtitle, poster_url, genre, release_year)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        input.id,
+        input.type,
+        input.title,
+        input.subtitle ?? null,
+        input.posterUrl,
+        JSON.stringify(input.genre ?? []),
+        input.releaseYear ?? null,
+      ]
+    );
+    return toResponse(rows[0]);
+  },
+
+  async update(
+    id: string,
+    input: Partial<{ title: string; subtitle: string; posterUrl: string; genre: string[]; releaseYear: number }>
+  ): Promise<MediaItemResponse | undefined> {
+    const existing = await pool.query<MediaItem>("SELECT * FROM media WHERE id = $1", [id]);
+    if (!existing.rows[0]) return undefined;
+
+    const current = existing.rows[0];
+    const { rows } = await pool.query<MediaItem>(
+      `UPDATE media SET title = $1, subtitle = $2, poster_url = $3, genre = $4, release_year = $5 WHERE id = $6 RETURNING *`,
+      [
+        input.title ?? current.title,
+        input.subtitle ?? current.subtitle,
+        input.posterUrl ?? current.poster_url,
+        input.genre ? JSON.stringify(input.genre) : current.genre,
+        input.releaseYear ?? current.release_year,
+        id,
+      ]
+    );
+    return toResponse(rows[0]);
+  },
+
+  async delete(id: string): Promise<boolean> {
+    const result = await pool.query("DELETE FROM media WHERE id = $1", [id]);
+    return (result.rowCount ?? 0) > 0;
+  },
 };

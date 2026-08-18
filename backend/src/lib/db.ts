@@ -20,9 +20,13 @@ export async function runMigrations() {
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      is_admin BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    -- Jaga-jaga kalau tabel users sudah ada dari sebelum kolom ini ditambahkan
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
 
     -- Tahap 2: katalog Cinema (movie/series) & Music (track/album)
     CREATE TABLE IF NOT EXISTS media (

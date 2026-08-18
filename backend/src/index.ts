@@ -9,6 +9,7 @@ import authRoutes from "./routes/authRoutes";
 import catalogRoutes from "./routes/catalogRoutes";
 import streamRoutes from "./routes/streamRoutes";
 import watchPartyRoutes from "./routes/watchPartyRoutes";
+import adminRoutes from "./routes/adminRoutes";
 import { attachWatchPartyWebSocket } from "./lib/wsServer";
 import { authRateLimit, generalRateLimit } from "./middleware/rateLimit";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler";
@@ -44,6 +45,7 @@ app.use("/api", authRoutes);
 app.use("/api", catalogRoutes);
 app.use("/api", streamRoutes);
 app.use("/api", watchPartyRoutes);
+app.use("/api", adminRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

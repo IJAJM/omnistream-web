@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   password_hash: string;
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +25,14 @@ export const userRepository = {
     const { rows } = await pool.query<User>(
       `INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING *`,
       [input.name, input.email, input.passwordHash]
+    );
+    return rows[0];
+  },
+
+  async promoteToAdmin(email: string): Promise<User | undefined> {
+    const { rows } = await pool.query<User>(
+      `UPDATE users SET is_admin = TRUE, updated_at = NOW() WHERE email = $1 RETURNING *`,
+      [email]
     );
     return rows[0];
   },
