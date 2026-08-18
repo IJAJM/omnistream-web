@@ -2,7 +2,7 @@
  * Konfigurasi koneksi API OmniStream.
  * Ganti NEXT_PUBLIC_API_BASE_URL di .env.local sesuai backend lo.
  */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://incredible-renewal-production-01b1.up.railway.app/api";
 
 export type MediaType = "movie" | "series" | "track" | "album";
 
